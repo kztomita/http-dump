@@ -1,0 +1,11 @@
+#ifndef HPACK_TYPES_H
+#define HPACK_TYPES_H
+
+#include <utility>
+
+namespace hpack {
+  using header_type = std::pair<std::string, std::string>;
+}
+
+
+#endif
