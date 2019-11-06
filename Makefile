@@ -8,7 +8,7 @@ DEPENDS = $(SOURCES:.cc=.d)
 
 all: $(ALL)
 
-http-dump: main.o url.o http_header.o http_response.o http.o https.o h2.o http2.o hpack_decoder.o hpack_table.o hpack_huffman.o dump.o
+http-dump: main.o url.o http_header.o http_response.o http.o https.o h2.o http2.o hpack_decoder.o hpack_table.o hpack_huffman.o hpack_encoder.o dump.o
 	$(CXX) -o $@ $^ $(LDFLAGS)
 
 clean:

@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "http2.h"
 #include "http_header.h"
+#include "hpack_encoder.h"
 #include "hpack_decoder.h"
 #include "socket.h"
 
@@ -149,29 +150,13 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
     {":authority", host},
   };
   // HPACK(rfc7541)形式でヘッダーを作成
-  auto& payload = headers.payload();
+  hpack::hpack_encoder encoder;
+  auto payload = encoder.encode(header_array);
 
-  for (auto& h : header_array) {
-    if (h.first.size() >= 127) {
-      throw std::runtime_error("header name is too long. Supports less than 127 characters.");
-    }
-    if (h.second.size() >= 127) {
-      throw std::runtime_error("header value is too long. Supports less than 127 characters.");
-    }
-    std::size_t offset = payload.size();
-    payload.resize(payload.size() + 3 + h.first.size() + h.second.size());
-    unsigned char* p = &payload[offset];
-    *p = 0x00;  // without Indexing
-    p++;
-    *p = h.first.size();
-    p++;
-    std::memcpy(p, &h.first[0], h.first.size());
-    p += h.first.size();
-    *p = h.second.size();
-    p++;
-    std::memcpy(p, &h.second[0], h.second.size());
-  }
   headers.header().set_length(payload.size());
+  using std::swap;
+  swap(headers.payload(), payload);
+
   write_http2_frame(stream, headers);
 
   // HEADERS受信
