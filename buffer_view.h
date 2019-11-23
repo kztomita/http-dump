@@ -47,7 +47,8 @@ public:
   }
 
   uint16_t at_uint16(std::size_t offset) const {
-    if (offset + 1 >= length_) {
+    std::size_t end = offset + 1;
+    if (end < offset || end >= length_) {
       throw std::range_error("invalid offset");
     }
     uint16_t value = 0;
@@ -56,7 +57,8 @@ public:
   }
 
   uint32_t at_uint32(std::size_t offset) const {
-    if (offset + 3 >= length_) {
+    std::size_t end = offset + 3;
+    if (end < offset || end >= length_) {
       throw std::range_error("invalid offset");
     }
     uint32_t value = 0;
@@ -65,14 +67,16 @@ public:
   }
 
   buffer_view subview(std::size_t offset, std::size_t length) const {
-    if (offset + length > length_) {
+    std::size_t end = offset + length;
+    if (end < offset || end > length_) {
       throw std::range_error("invalid offset or length");
     }
     return buffer_view(buffer_ + offset, length);
   }
 
   bool test_range(std::size_t offset, std::size_t length) {
-    if (offset + length > length_) {
+    std::size_t end = offset + 1;
+    if (end < offset || end > length_) {
       return false;
     }
     return true;
