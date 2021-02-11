@@ -1,6 +1,7 @@
 #ifndef HPACK_TYPES_H
 #define HPACK_TYPES_H
 
+#include <string>
 #include <utility>
 
 namespace hpack {
