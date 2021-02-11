@@ -78,14 +78,15 @@ http_response read_response(SyncReadStream& socket) {
       // ヘッダー終了
       break;
     }
-    http_header h = create_http_header_from_header_line(line);
-    r.headers_.push_back(h);
+    auto h = create_http_header_from_header_line(line);
 
-    if (string_util::tolower(h.key) == "transfer-encoding") {
-      transfer_encoding = h.value;
-    } else if (string_util::tolower(h.key) == "content-length") {
-      content_length = std::atoi(h.value.c_str());
+    if (string_util::tolower(h->key) == "transfer-encoding") {
+      transfer_encoding = h->value;
+    } else if (string_util::tolower(h->key) == "content-length") {
+      content_length = std::atoi(h->value.c_str());
     }
+
+    r.headers_.push_back(std::move(h));
   }
 
   // payload読み込み

@@ -2,13 +2,17 @@
 #include <string>
 #include <boost/asio.hpp>
 #include <getopt.h>
+#include <string_view>
+#include <vector>
 #include "debug.h"
 #include "socket.h"
 #include "global.h"
-#include "http_response.h"
-#include "http.h"
-#include "https.h"
 #include "h2.h"
+#include "http.h"
+#include "http_header.h"
+#include "http_header_list.h"
+#include "http_response.h"
+#include "https.h"
 #include "url.h"
 
 void usage(const char* message = nullptr) {
@@ -19,15 +23,17 @@ void usage(const char* message = nullptr) {
   std::cerr << "http-client <options> <url>" << std::endl << std::endl;
   std::cerr << "-v:       verbose mode" << std::endl;
   std::cerr << "--http2:  use http/2 (https only)" << std::endl;
+  std::cerr << "-H:       header" << std::endl;
 
   exit(1);
 }
-
 
 int main(int argc, char *argv[]) {
   namespace asio = boost::asio;
 
   bool use_http2 = false;
+  http_header h;
+  http_header_list headers;
 
   if (argc < 2) {
     usage();
@@ -38,7 +44,7 @@ int main(int argc, char *argv[]) {
     {0,                     0, 0,  0 },
   };
   while (true) {
-    int opt = getopt_long(argc - 1, argv, "v",
+    int opt = getopt_long(argc - 1, argv, "H:v",
                       long_options, NULL);
     if (opt == -1) {
       break;
@@ -46,6 +52,14 @@ int main(int argc, char *argv[]) {
     switch (opt) {
     case 1:     // --http2
       use_http2 = true;
+      break;
+    case 'H':
+      {
+        auto h = create_http_header_from_header_line_or_null(optarg);
+        if (h) {
+          headers.emplace_back(std::move(h));
+        }
+      }
       break;
     case 'v':
       g_verbose = true;
@@ -85,18 +99,18 @@ int main(int argc, char *argv[]) {
 
     if (c.scheme == "http") {
       http protocol;
-      http_response r = protocol.get(remote_address, port, c.host, c.path_and_query);
+      http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
       debug_dump(r);
       std::cout << r.stringify_payload() << std::endl;
     } else if (c.scheme == "https") {
       if (use_http2) {
         h2 protocol;
-        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query);
+        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
         debug_dump(r);
         std::cout << r.stringify_payload() << std::endl;
       } else {
         https protocol;
-        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query);
+        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
         debug_dump(r);
         std::cout << r.stringify_payload() << std::endl;
       }

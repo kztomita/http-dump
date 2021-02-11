@@ -12,6 +12,7 @@
 #include "hpack_encoder.h"
 #include "hpack_decoder.h"
 #include "socket.h"
+#include "string_util_tolower.h"
 
 namespace asio = boost::asio;
 
@@ -69,7 +70,7 @@ void send_window_update(SyncReadStream& stream, uint32_t stream_id, uint32_t inc
 } // unnamed namespace
 
 
-http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path) {
+http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path, const http_header_list& req_headers) {
   asio::io_service io_service;
 
   asio::ssl::context ctx(asio::ssl::context::tlsv12_client);
@@ -143,12 +144,19 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
     header.set_stream_id(stream_id);
   }
 
-  std::vector<std::pair<std::string, std::string> > header_array{ 
+  std::vector<hpack::header_type> header_array{
     {":method", "GET"},
     {":scheme", "https"},
     {":path", path},
     {":authority", host},
   };
+  // XXX ヘッダーが多くても現状フラグメントは行っていない
+  for (const auto& h : req_headers) {
+    header_array.emplace_back(hpack::header_type{
+        string_util::tolower(h->key),
+        h->value});
+  }
+
   // HPACK(rfc7541)形式でヘッダーを作成
   hpack::hpack_encoder encoder;
   auto payload = encoder.encode(header_array);
@@ -252,7 +260,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
     if (h.first == ":status") {
       continue;
     }
-    r.headers_.push_back(http_header(convert_header_name(h.first), h.second));
+    r.headers_.push_back(std::make_unique<http_header>(convert_header_name(h.first), h.second));
   }
 
   swap(r.payload_, response_body);

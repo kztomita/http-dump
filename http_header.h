@@ -1,8 +1,9 @@
 #ifndef HTTP_HEADER_H
 #define HTTP_HEADER_H
 
-#include <string>
 #include <iostream>
+#include <string>
+#include <memory>
 
 struct http_header {
   std::string key;
@@ -14,6 +15,7 @@ struct http_header {
 
 std::ostream& operator<<(std::ostream& os, const http_header& h);
 
-http_header create_http_header_from_header_line(const std::string& line);
+std::unique_ptr<http_header> create_http_header_from_header_line_or_null(const std::string& line);
+std::unique_ptr<http_header> create_http_header_from_header_line(const std::string& line);
 
 #endif

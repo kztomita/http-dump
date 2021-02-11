@@ -10,7 +10,7 @@ void dump(const http_response& r) {
   std::cout << "Status " << r.code_ << std::endl;
   std::cout << "Headers" << std::endl;
   for (const auto& h : r.headers_) {
-    std::cout << h << std::endl;
+    std::cout << *h << std::endl;
   }
 }
 

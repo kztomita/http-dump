@@ -12,7 +12,7 @@ public:
   using payload_type = std::vector<uint8_t>;
 
   uint  code_;
-  std::vector<http_header> headers_;
+  std::vector<std::unique_ptr<http_header>> headers_;
   payload_type payload_;
 
   std::string stringify_payload() const;

@@ -38,12 +38,15 @@ Linux
     options:
     -v         verbose mode
     --http2    http/2で接続
+    -H         header
 
 -vオプションをつけると送受信するHTTPフレームやhttpヘッダーの内容を表示します。-vがない場合はGETリクエストの結果、取得したレスポンスボディを表示します(curlのような動作)。
 
 --http2オプションをつけるとHTTP/2で接続します。サーバー側がHTTP/2に対応していない場合は"http/2 is not selected."のメッセージを表示して終了します。HTTP/2での接続はTLS接続(https)時のみ対応しています。URL指定がhttp://の場合は、本オプションを指定しても無視されます。
 
 --http2オプションをつけない場合は、http/1.1で接続します。
+
+-Hオプションでヘッダーを指定できます。複数のヘッダーを指定したい場合は複数の-Hオプションを指定してください。
 
 ## 使用例
 
@@ -56,6 +59,9 @@ Linux
 
     ./http-dump -v https://github.co.jp/
 
+ヘッダー(User-Agent)を指定する。
+
+    ./http-dump -v -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:85.0) Gecko/20100101 Firefox/85.0" https://github.co.jp/
 
 # 対応していないこと
 
