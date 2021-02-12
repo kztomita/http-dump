@@ -5,6 +5,6 @@
 #include <memory>
 #include "http_header.h"
 
-using http_header_list = std::list<std::unique_ptr<http_header>>;
+using http_header_list = std::list<http_header_ptr>;
 
 #endif

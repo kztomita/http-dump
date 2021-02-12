@@ -13,9 +13,11 @@ struct http_header {
   http_header(const std::string& key, const std::string& value);
 };
 
+using http_header_ptr = std::unique_ptr<http_header>;
+
 std::ostream& operator<<(std::ostream& os, const http_header& h);
 
-std::unique_ptr<http_header> create_http_header_from_header_line_or_null(const std::string& line);
-std::unique_ptr<http_header> create_http_header_from_header_line(const std::string& line);
+http_header_ptr create_http_header_from_header_line_or_null(const std::string& line);
+http_header_ptr create_http_header_from_header_line(const std::string& line);
 
 #endif

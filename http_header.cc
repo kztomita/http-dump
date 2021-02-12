@@ -10,7 +10,7 @@ http_header::http_header(const std::string& key, const std::string& value)
     value(value) {
 }
 
-std::unique_ptr<http_header> create_http_header_from_header_line_or_null(const std::string& line) {
+http_header_ptr create_http_header_from_header_line_or_null(const std::string& line) {
   // 改行コード削除
   std::string stripped;
   std::copy_if(line.begin(), line.end(), std::back_inserter(stripped),
@@ -18,7 +18,7 @@ std::unique_ptr<http_header> create_http_header_from_header_line_or_null(const s
 
   auto pos = stripped.find(":");
   if (pos == std::string::npos) {
-    return std::unique_ptr<http_header>();      // null
+    return http_header_ptr();      // null
   }
 
   auto stripped_view = std::string_view(stripped);
@@ -32,7 +32,7 @@ std::unique_ptr<http_header> create_http_header_from_header_line_or_null(const s
   return std::make_unique<http_header>(std::string(name), std::string(value));
 }
 
-std::unique_ptr<http_header> create_http_header_from_header_line(const std::string& line) {
+http_header_ptr create_http_header_from_header_line(const std::string& line) {
   auto h = create_http_header_from_header_line_or_null(line);
   if (!h) {
     std::ostringstream os;
