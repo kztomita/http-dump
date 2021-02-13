@@ -118,7 +118,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
 
   if (!(headers_frame.flags() & 0x04)) {
     // XXX CONTINUATIONが続く
-    throw std::runtime_error("CONTINUATION farme not supported");
+    throw std::runtime_error("CONTINUATION frame not supported");
   }
 
   hpack::hpack_decoder decoder(&header_block[0], header_block.size());
@@ -144,7 +144,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
       throw std::runtime_error("The frame which isn't a DATA frame was received.");
     }
     if (data_frame.flags() & 0x08) {
-      throw std::runtime_error("padding flag not suppouted.");
+      throw std::runtime_error("padding flag not supported.");
     }
     response_body.insert(response_body.end(), data_frame.payload().begin(), data_frame.payload().end());
     if (data_frame.flags() & 0x01) { // END_STREAM
