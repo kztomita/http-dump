@@ -1,6 +1,7 @@
 #ifndef HTTP2_SOCKET_H
 #define HTTP2_SOCKET_H
 
+#include <algorithm>
 #include <cstring>
 #include <string>
 #include "hpack_encoder.h"
@@ -81,13 +82,8 @@ void send_http2_headers(SyncWriteStream& stream,
                         uint32_t stream_id,
                         const std::string& host,
                         const std::string& path,
-                        const http_header_list& req_headers) {
-  http2_frame headers;
-
-  auto& header = headers.header();
-  header.type = http2_frame_header::TYPE_HEADERS;
-  header.flags = 0x05;         // END_HEADERS | END_STREAM
-  header.set_stream_id(stream_id);
+                        const http_header_list& req_headers,
+                        std::size_t max_payload_len = 16384) {
 
   std::vector<hpack::header_type> header_array{
     {":method", "GET"},
@@ -104,13 +100,63 @@ void send_http2_headers(SyncWriteStream& stream,
 
   // HPACK(rfc7541)形式でヘッダーを作成
   hpack::hpack_encoder encoder;
-  auto payload = encoder.encode<http2_frame::payload_type>(header_array);
+  auto header_block = encoder.encode<http2_frame::payload_type>(header_array);
 
-  headers.header().set_length(payload.size());
-  using std::swap;
-  swap(headers.payload(), payload);
+  if (header_block.size() <= max_payload_len) {
+    http2_frame headers;
+    auto& header = headers.header();
+    header.type = http2_frame_header::TYPE_HEADERS;
+    header.flags = 0x05;         // END_HEADERS | END_STREAM
+    header.set_stream_id(stream_id);
 
-  write_http2_frame(stream, headers);
+    headers.header().set_length(header_block.size());
+    using std::swap;
+    swap(headers.payload(), header_block);
+
+    write_http2_frame(stream, headers);
+  } else {
+    // HEADERS AND CONTINUATION
+    // nginx相手だとENHANCE YOUR CALMが返される
+    {
+      http2_frame headers;
+      auto& header = headers.header();
+      header.type = http2_frame_header::TYPE_HEADERS;
+      header.flags = 0x01;         // END_STREAM
+      header.set_stream_id(stream_id);
+
+      headers.header().set_length(max_payload_len);
+      std::copy(header_block.begin(),
+                header_block.begin() + max_payload_len,
+                std::back_inserter(headers.payload()));
+
+      write_http2_frame(stream, headers);
+    }
+
+    std::size_t offset = max_payload_len;
+    while (offset < header_block.size()) {
+      auto left_bytes = header_block.size() - offset;
+      auto len = std::min(left_bytes, max_payload_len);
+
+      http2_frame continuation;
+      auto& header = continuation.header();
+      header.type = http2_frame_header::TYPE_CONTINUATION;
+      header.flags = 0x00;
+      if (len <= max_payload_len) {
+        header.flags |= 0x04;       // END_HEADERS
+      }
+      header.set_stream_id(stream_id);
+
+      continuation.header().set_length(len);
+      auto start = header_block.begin() + offset;
+      std::copy(start,
+                start + len,
+                std::back_inserter(continuation.payload()));
+
+      write_http2_frame(stream, continuation);
+
+      offset += len;
+    }
+  }
 }
 
 template<typename SyncWriteStream>
