@@ -90,17 +90,20 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
 #endif
 
   // SETTINGS受信
-  while (true) {
+  bool rcv_settings = false;
+  bool rcv_settings_ack = false;
+  while (!rcv_settings || !rcv_settings_ack) {
     auto frame = read_http2_frame(stream);
-    // SETTINGS ACK
-    if (frame.type() == http2_frame_header::TYPE_SETTINGS &&
-        frame.flags() & 0x01) {
-      break;
+    if (frame.type() == http2_frame_header::TYPE_SETTINGS) {
+      if (frame.flags() & 0x01) {  // ACK
+        rcv_settings_ack = true;
+      } else {
+        rcv_settings = true;
+        // SETTINGS ACK送信
+        send_http2_settings_ack(stream);
+      }
     }
   }
-
-  // SETTINGS ACK送信
-  send_http2_settings_ack(stream);
 
   uint32_t stream_id = 1;
 
