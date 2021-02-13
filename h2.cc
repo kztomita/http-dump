@@ -115,7 +115,9 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
     throw std::runtime_error("The frame which isn't a HEADERS frame was received.");
   }
   std::size_t fragment_offset = 0;
+  std::size_t pad_length = 0;
   if (headers_frame.flags() & 0x08) {        // PADDED flag
+    pad_length = headers_frame.payload()[fragment_offset];
     fragment_offset += 1;
   }
   if (headers_frame.flags() & 0x20) {        // PRIORITY flag
@@ -123,11 +125,24 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   }
   header_block.insert(header_block.end(),
                       headers_frame.payload().begin() + fragment_offset,
-                      headers_frame.payload().end());
+                      headers_frame.payload().end() - pad_length);
 
-  if (!(headers_frame.flags() & 0x04)) {
-    // XXX CONTINUATIONが続く
-    throw std::runtime_error("CONTINUATION frame not supported");
+  if (!(headers_frame.flags() & 0x04)) {  // !END_HEADERS
+    // CONTINUATIONが続く
+    while (true) {
+      auto continuation_frame = read_http2_frame(stream);
+      if (continuation_frame.type() != http2_frame_header::TYPE_CONTINUATION) {
+        throw std::runtime_error("The frame which isn't a CONTINUATION frame was received.");
+      }
+
+      header_block.insert(header_block.end(),
+                          continuation_frame.payload().begin(),
+                          continuation_frame.payload().end());
+
+      if (continuation_frame.flags() & 0x04) {  // END_HEADERS
+        break;
+      }
+    }
   }
 
   hpack::hpack_decoder decoder(&header_block[0], header_block.size());
