@@ -159,7 +159,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
 
   // HPACK(rfc7541)形式でヘッダーを作成
   hpack::hpack_encoder encoder;
-  auto payload = encoder.encode(header_array);
+  auto payload = encoder.encode<http2_frame::payload_type>(header_array);
 
   headers.header().set_length(payload.size());
   using std::swap;
