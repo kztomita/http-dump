@@ -6,7 +6,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include "http_response.h"
-#include "http2.h"
+#include "http2_frame.h"
 #include "string_util_split.h"
 #include "string_util_tolower.h"
 #include "debug.h"

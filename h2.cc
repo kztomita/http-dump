@@ -7,7 +7,7 @@
 #include <string_view>
 #include <boost/asio/ssl.hpp>
 #include "debug.h"
-#include "http2.h"
+#include "http2_frame.h"
 #include "http_header.h"
 #include "hpack_encoder.h"
 #include "hpack_decoder.h"

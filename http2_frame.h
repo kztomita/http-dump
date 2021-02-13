@@ -1,5 +1,5 @@
-#ifndef HTTP2_H
-#define HTTP2_H
+#ifndef HTTP2_FRAME_H
+#define HTTP2_FRAME_H
 
 #include <cstdint>
 #include <cstring>

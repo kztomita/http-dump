@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include "http2.h"
+#include "http2_frame.h"
 #include "hpack_types.h"
 
 namespace hpack {
