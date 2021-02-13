@@ -6,7 +6,28 @@
 
 namespace {
 
-void dump_settings_payload(const http2_frame::payload_type& payload) {
+void dump_headers_payload(const http2_frame::payload_type& payload, uint8_t flags) {
+  auto buffer = buffer_view(&payload[0], payload.size());
+
+  std::size_t offset = 0;
+
+  if (flags & 0x08) {  // PADDED
+    std::cout << "Pad Length: " << buffer.at(offset) << std::endl;
+    offset++;
+  }
+  if (flags & 0x20) {  // PRIORITY
+    uint32_t dependency = buffer.at_uint32(offset);
+    uint8_t weight =  buffer.at_uint32(offset + 4);
+    std::cout << "E: " << ((dependency & 0x80000000) ? 1 : 0) << std::endl
+              << "Stream Dependency: " << (dependency & 0x7fffffff) << std::endl
+              << "Weight: " << weight << std::endl;
+    offset += 5;
+  }
+  // HEADERSは複数フレームになることがあるので、Header Block Fragmentは
+  // ここでは出力できない
+}
+
+void dump_settings_payload(const http2_frame::payload_type& payload, uint8_t flags) {
   auto buffer = buffer_view(&payload[0], payload.size());
 
   std::size_t offset = 0;
@@ -78,12 +99,30 @@ std::string stringify_error_code(uint32_t code) {
   }
 }
 
-void dump_rst_stream_payload(const http2_frame::payload_type& payload) {
+void dump_rst_stream_payload(const http2_frame::payload_type& payload, uint8_t flags) {
   auto buffer = buffer_view(&payload[0], payload.size());
 
   uint32_t error_code = buffer.at_uint32(0);
 
-  std::cout << "Error Code: " << stringify_error_code(error_code) << std::endl;
+  std::cout << "Error Code: " << stringify_error_code(error_code) << "(" << error_code << ")" << std::endl;
+}
+
+void dump_goaway_payload(const http2_frame::payload_type& payload, uint8_t flags) {
+  auto buffer = buffer_view(&payload[0], payload.size());
+
+  uint32_t last_stream_id = buffer.at_uint32(0) & 0x7fffffff;
+  uint32_t error_code = buffer.at_uint32(4);
+
+  std::cout << "Last Stream Id: " << last_stream_id << std::endl
+            << "Error Code: " << stringify_error_code(error_code) << "(" << error_code << ")" << std::endl;
+}
+
+void dump_window_update_payload(const http2_frame::payload_type& payload, uint8_t flags) {
+  auto buffer = buffer_view(&payload[0], payload.size());
+
+  uint32_t increment = buffer.at_uint32(0) & 0x7fffffff;
+
+  std::cout << "Window Size Increment: " << increment << std::endl;
 }
 
 } // namespace
@@ -92,7 +131,7 @@ void dump(const http2_frame& frame) {
   auto type = frame.type();
   std::string type_str;
   std::vector<std::string> flags;
-  std::function<void(const http2_frame::payload_type&)> dump_payload;
+  std::function<void(const http2_frame::payload_type&, uint8_t)> dump_payload;
 
   switch (type) {
   case http2_frame_header::TYPE_DATA:
@@ -106,6 +145,7 @@ void dump(const http2_frame& frame) {
     if (frame.flags() & 0x04) { flags.push_back("END_HEADERS"); }
     if (frame.flags() & 0x08) { flags.push_back("PADDED"); }
     if (frame.flags() & 0x20) { flags.push_back("PRIORITY"); }
+    dump_payload = dump_headers_payload;
     break;
   case http2_frame_header::TYPE_PRIORITY:
     type_str = "PRIORITY";
@@ -127,25 +167,28 @@ void dump(const http2_frame& frame) {
     break;
   case http2_frame_header::TYPE_GOAWAY:
     type_str = "GOAWAY";
+    dump_payload = dump_goaway_payload;
     break;
   case http2_frame_header::TYPE_WINDOW_UPDATE:
     type_str = "WINDOW_UPDATE";
+    dump_payload = dump_window_update_payload;
     break;
   case http2_frame_header::TYPE_CONTINUATION:
     type_str = "CONTINUATION";
+    if (frame.flags() & 0x04) { flags.push_back("END_HEADERS"); }
     break;
   default:
     type_str = "Type: " + type;
     break;
   }
 
-  std::cout << type_str;
+  std::cout << "Frame: " << type_str;
   std::cout << std::endl;
 
-  std::cout << "Header:";
-  if (frame.flags()) {
-    std::cout << " (Flags:" << string_util::join(",", flags) << ")";
-  }
+  std::cout << "Header:"
+            << " Length=" << frame.length()
+            << " StreamId=" << frame.stream_id()
+            << " Flags=" << string_util::join(",", flags);
   std::cout << std::endl;
 
   dump(&frame.header(), sizeof(http2_frame_header));
@@ -153,7 +196,7 @@ void dump(const http2_frame& frame) {
     std::cout << "Payload:" << std::endl;
     dump(frame.payload_buffer(), frame.payload().size(), 200);
     if (dump_payload) {
-      dump_payload(frame.payload());
+      dump_payload(frame.payload(), frame.flags());
     }
   }
   std::cout << std::endl;
