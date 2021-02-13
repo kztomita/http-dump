@@ -37,22 +37,22 @@ void dump_settings_payload(const http2_frame::payload_type& payload, uint8_t fla
     uint32_t value = buffer.at_uint32(offset + 2);
 
     switch (id) {
-    case 1:
+    case SETTINGS_HEADER_TABLE_SIZE:
       std::cout << "SETTINGS_HEADER_TABLE_SIZE: ";
       break;
-    case 2:
+    case SETTINGS_ENABLE_PUSH:
       std::cout << "SETTINGS_ENABLE_PUSH: ";
       break;
-    case 3:
+    case SETTINGS_MAX_CONCURRENT_STREAMS:
       std::cout << "SETTINGS_MAX_CONCURRENT_STREAMS: ";
       break;
-    case 4:
+    case SETTINGS_INITIAL_WINDOW_SIZE:
       std::cout << "SETTINGS_INITIAL_WINDOW_SIZE: ";
       break;
-    case 5:
+    case SETTINGS_MAX_FRAME_SIZE:
       std::cout << "SETTINGS_MAX_FRAME_SIZE: ";
       break;
-    case 6:
+    case SETTINGS_MAX_HEADER_LIST_SIZE:
       std::cout << "SETTINGS_MAX_HEADER_LIST_SIZE: ";
       break;
     default:

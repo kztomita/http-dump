@@ -4,6 +4,8 @@
 #include <algorithm>
 #include <cstring>
 #include <string>
+#include <utility>
+#include <vector>
 #include "hpack_encoder.h"
 #include "http_header_list.h"
 #include "http2_frame.h"
@@ -60,8 +62,43 @@ void write_http2_frame(SyncWriteStream& socket, const http2_frame& frame) {
 }
 
 
+using settings_parameter = std::pair<uint16_t, uint32_t>;
+
+template<typename SyncWriteStream, typename T>
+void send_http2_settings(SyncWriteStream& stream, const T& parameters) {
+  static_assert(std::is_same<typename T::value_type, settings_parameter>::value,
+                "T::value_type is not settings_parameter");
+
+  http2_frame settings;
+
+  auto& header = settings.header();
+  header.type = http2_frame_header::TYPE_SETTINGS;
+  header.flags = 0x00;
+  header.set_stream_id(0);
+  header.flags = 0x00;
+
+  auto& payload = settings.payload();
+  for (const auto&p : parameters) {
+    auto id = htons(p.first);
+    auto value = htonl(p.second);
+    payload.resize(payload.size() + 6);
+
+    std::memcpy(&payload[payload.size() - 6], &id, 2);
+    std::memcpy(&payload[payload.size() - 4], &value, 4);
+  }
+
+  header.set_length(payload.size());
+
+  write_http2_frame(stream, settings);
+}
+
 template<typename SyncWriteStream>
-void send_http2_settings(SyncWriteStream& stream, bool ack) {
+void send_http2_settings(SyncWriteStream& stream) {
+  send_http2_settings(stream, std::vector<settings_parameter>());
+}
+
+template<typename SyncWriteStream>
+void send_http2_settings_ack(SyncWriteStream& stream) {
   http2_frame settings;
 
   auto& header = settings.header();
@@ -69,10 +106,7 @@ void send_http2_settings(SyncWriteStream& stream, bool ack) {
   header.type = http2_frame_header::TYPE_SETTINGS;
   header.flags = 0x00;
   header.set_stream_id(0);
-
-  if (ack) {
-    header.flags |= 0x01;
-  }
+  header.flags = 0x01;  // ACK
 
   write_http2_frame(stream, settings);
 }

@@ -78,7 +78,16 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   asio::write(stream, asio::buffer(request_stream.str()));
 
   // SETTINGS送信
-  send_http2_settings(stream, false);
+#if 1
+  send_http2_settings(stream);
+#else
+  // パラメータを指定する場合
+  std::vector<settings_parameter> params{
+    {SETTINGS_MAX_CONCURRENT_STREAMS, 10},
+    {SETTINGS_MAX_FRAME_SIZE, 16384},
+  };
+  send_http2_settings(stream, params);
+#endif
 
   // SETTINGS受信
   while (true) {
@@ -91,7 +100,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   }
 
   // SETTINGS ACK送信
-  send_http2_settings(stream, true);
+  send_http2_settings_ack(stream);
 
   uint32_t stream_id = 1;
 
