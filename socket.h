@@ -6,7 +6,6 @@
 #include <string>
 #include <boost/asio.hpp>
 #include "http_response.h"
-#include "http2_frame.h"
 #include "string_util_split.h"
 #include "string_util_tolower.h"
 #include "debug.h"
@@ -146,56 +145,6 @@ http_response read_response(SyncReadStream& socket) {
   }
 
   return r;
-}
-
-template<typename SyncReadStream>
-http2_frame read_http2_frame(SyncReadStream& socket) {
-  namespace asio = boost::asio;
-
-  asio::streambuf receive_buffer;
-
-  asio::read(socket, receive_buffer, boost::asio::transfer_exactly(9));
-
-  const char* headerp = asio::buffer_cast<const char*>(receive_buffer.data());
-
-  http2_frame frame;
-
-  std::memcpy(&frame.header(), headerp, 9);
-  receive_buffer.consume(9);
-
-  uint payload_size = frame.header().length();
-
-  if (payload_size) {
-    frame.payload().resize(payload_size);
-
-    asio::read(socket, receive_buffer, boost::asio::transfer_exactly(payload_size));
-
-    const char* payloadp = asio::buffer_cast<const char*>(receive_buffer.data());
-    std::memcpy(frame.payload_buffer(), payloadp, payload_size);
-  }
-
-  debug_message("RECV");
-  debug_dump(frame);
-
-  return frame;
-}
-
-template<typename SyncReadStream>
-void write_http2_frame(SyncReadStream& socket, const http2_frame& frame) {
-  namespace asio = boost::asio;
-
-  if (frame.header().length() != frame.payload().size()) {
-    std::cerr << "payload length mismatch." << std::endl;
-  }
-
-  asio::write(socket, asio::buffer(reinterpret_cast<const char*>(&frame.header()), sizeof(http2_frame_header)));
-
-  if (frame.payload().size()) {
-    asio::write(socket, asio::buffer(reinterpret_cast<const char*>(frame.payload_buffer()), frame.payload().size()));
-  }
-
-  debug_message("SEND");
-  debug_dump(frame);
 }
 
 #endif

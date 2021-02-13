@@ -8,6 +8,7 @@
 #include <boost/asio/ssl.hpp>
 #include "debug.h"
 #include "http2_frame.h"
+#include "http2_socket.h"
 #include "http_header.h"
 #include "hpack_encoder.h"
 #include "hpack_decoder.h"
@@ -42,29 +43,6 @@ std::string convert_header_name(const std::string& name) {
   }
 
   return converted;
-}
-
-template<typename SyncReadStream>
-void send_window_update(SyncReadStream& stream, uint32_t stream_id, uint32_t increment) {
-  if (increment & 0x80000000) {
-    throw std::invalid_argument("increment too large");
-  }
-
-  http2_frame window_update;
-
-  auto& header = window_update.header();
-  header.set_length(4);
-  header.type = http2_frame_header::TYPE_WINDOW_UPDATE;
-  header.flags = 0x00;
-  header.set_stream_id(stream_id);
-
-  auto& payload = window_update.payload();
-  payload.resize(4);
-  uint32_t value;
-  value = htonl(increment);
-  std::memcpy(&payload[0], &value, 4);
-
-  write_http2_frame(stream, window_update);
 }
 
 } // unnamed namespace
@@ -221,8 +199,8 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
     }
 
     // WINDOW UPDATE送信
-    send_window_update(stream, stream_id, data_frame.length());
-    send_window_update(stream, 0, data_frame.length());         // connection level
+    send_http2_window_update(stream, stream_id, data_frame.length());
+    send_http2_window_update(stream, 0, data_frame.length());         // connection level
   }
 
   // GOAWAY送信
