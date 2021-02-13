@@ -10,10 +10,8 @@
 #include "http2_frame.h"
 #include "http2_socket.h"
 #include "http_header.h"
-#include "hpack_encoder.h"
 #include "hpack_decoder.h"
 #include "socket.h"
-#include "string_util_tolower.h"
 
 namespace asio = boost::asio;
 
@@ -80,15 +78,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   asio::write(stream, asio::buffer(request_stream.str()));
 
   // SETTINGS送信
-  http2_frame settings;
-  {
-    auto& header = settings.header();
-    header.set_length(0);
-    header.type = http2_frame_header::TYPE_SETTINGS;
-    header.flags = 0x00;
-    header.set_stream_id(0);
-  }
-  write_http2_frame(stream, settings);
+  send_http2_settings(stream, false);
 
   // SETTINGS受信
   while (true) {
@@ -101,49 +91,12 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   }
 
   // SETTINGS ACK送信
-  http2_frame settings_ack;
-  {
-    auto& header = settings_ack.header();
-    header.set_length(0);
-    header.type = http2_frame_header::TYPE_SETTINGS;
-    header.flags = 0x01;
-    header.set_stream_id(0);
-  }
-  write_http2_frame(stream, settings_ack);
+  send_http2_settings(stream, true);
 
   uint32_t stream_id = 1;
 
   // HEADERS送信
-  http2_frame headers;
-  {
-    auto& header = headers.header();
-    header.type = http2_frame_header::TYPE_HEADERS;
-    header.flags = 0x05;         // END_HEADERS | END_STREAM
-    header.set_stream_id(stream_id);
-  }
-
-  std::vector<hpack::header_type> header_array{
-    {":method", "GET"},
-    {":scheme", "https"},
-    {":path", path},
-    {":authority", host},
-  };
-  // XXX ヘッダーが多くても現状フラグメントは行っていない
-  for (const auto& h : req_headers) {
-    header_array.emplace_back(hpack::header_type{
-        string_util::tolower(h->key),
-        h->value});
-  }
-
-  // HPACK(rfc7541)形式でヘッダーを作成
-  hpack::hpack_encoder encoder;
-  auto payload = encoder.encode<http2_frame::payload_type>(header_array);
-
-  headers.header().set_length(payload.size());
-  using std::swap;
-  swap(headers.payload(), payload);
-
-  write_http2_frame(stream, headers);
+  send_http2_headers(stream, stream_id, host, path, req_headers);
 
   // HEADERS受信
   // Header Block FragmentからHeader Blockを構築
@@ -204,23 +157,7 @@ http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const s
   }
 
   // GOAWAY送信
-  http2_frame goaway;
-  {
-    auto& header = goaway.header();
-    header.set_length(8);
-    header.type = http2_frame_header::TYPE_GOAWAY;
-    header.flags = 0x00;
-    header.set_stream_id(0);
-
-    auto& payload = goaway.payload();
-    payload.resize(8);
-    uint32_t value;
-    value = htonl(stream_id);   // Last Stream Id
-    std::memcpy(&payload[0], &value, 4);
-    value = htonl(0);           // Error Code
-    std::memcpy(&payload[4], &value, 4);
-  }
-  write_http2_frame(stream, goaway);
+  send_http2_goaway(stream, stream_id);
 
   http_response r;
 
