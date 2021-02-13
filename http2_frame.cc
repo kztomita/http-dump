@@ -4,6 +4,8 @@
 #include "buffer_view.h"
 #include "string_util_join.h"
 
+namespace {
+
 void dump_settings_payload(const http2_frame::payload_type& payload) {
   auto buffer = buffer_view(&payload[0], payload.size());
 
@@ -83,6 +85,8 @@ void dump_rst_stream_payload(const http2_frame::payload_type& payload) {
 
   std::cout << "Error Code: " << stringify_error_code(error_code) << std::endl;
 }
+
+} // namespace
 
 void dump(const http2_frame& frame) {
   auto type = frame.type();
