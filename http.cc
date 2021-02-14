@@ -6,8 +6,8 @@ namespace asio = boost::asio;
 
 http_response http::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path, const http_header_list& headers) {
 
-  asio::io_service io_service;
-  asio::ip::tcp::socket socket(io_service);
+  asio::io_context io_context;
+  asio::ip::tcp::socket socket(io_context);
 
   socket.connect(asio::ip::tcp::endpoint(ip, port));
 

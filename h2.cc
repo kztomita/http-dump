@@ -47,14 +47,14 @@ std::string convert_header_name(const std::string& name) {
 
 
 http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path, const http_header_list& req_headers) {
-  asio::io_service io_service;
+  asio::io_context io_context;
 
   asio::ssl::context ctx(asio::ssl::context::tlsv12_client);
 
   auto native_ctx = ctx.native_handle();
   SSL_CTX_set_alpn_protos(native_ctx, (const unsigned char *)"\x02h2", 3);
 
-  asio::ssl::stream<asio::ip::tcp::socket> stream(io_service, ctx);
+  asio::ssl::stream<asio::ip::tcp::socket> stream(io_context, ctx);
 
   // TODO 証明書
 

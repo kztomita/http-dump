@@ -9,10 +9,10 @@ namespace asio = boost::asio;
 // https://www.boost.org/doc/libs/1_66_0/doc/html/boost_asio/overview/ssl.html
 
 http_response https::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path, const http_header_list& headers) {
-  asio::io_service io_service;
+  asio::io_context io_context;
 
   asio::ssl::context ctx(asio::ssl::context::tlsv12_client);
-  asio::ssl::stream<asio::ip::tcp::socket> stream(io_service, ctx);
+  asio::ssl::stream<asio::ip::tcp::socket> stream(io_context, ctx);
 
   // TODO 証明書
 
