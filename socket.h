@@ -15,7 +15,7 @@
 // read(),read_until()へ渡す型。
 //
 // Ref.
-// https://www.boost.org/doc/libs/1_64_0/doc/html/boost_asio/reference/SyncReadStream.html
+// https://www.boost.org/doc/libs/1_73_0/libs/beast/doc/html/beast/using_io/stream_types.html
 
 template<typename SyncReadStream>
 bool read_line(SyncReadStream& socket, boost::asio::streambuf& receive_buffer, std::string& line) {
