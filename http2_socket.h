@@ -6,7 +6,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <boost/beast/core.hpp>
 #include "hpack_encoder.h"
 #include "http_header_list.h"
 #include "http2_frame.h"
@@ -14,9 +13,6 @@
 
 template<typename SyncReadStream>
 http2_frame read_http2_frame(SyncReadStream& socket) {
-  static_assert(boost::beast::is_sync_read_stream<SyncReadStream>::value,
-                "SyncReadStream requirements not met");
-
   namespace asio = boost::asio;
 
   asio::streambuf receive_buffer;
@@ -49,9 +45,6 @@ http2_frame read_http2_frame(SyncReadStream& socket) {
 
 template<typename SyncWriteStream>
 void write_http2_frame(SyncWriteStream& socket, const http2_frame& frame) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   namespace asio = boost::asio;
 
   if (frame.header().length() != frame.payload().size()) {
@@ -73,8 +66,6 @@ using settings_parameter = std::pair<uint16_t, uint32_t>;
 
 template<typename SyncWriteStream, typename T>
 void send_http2_settings(SyncWriteStream& stream, const T& parameters) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
   static_assert(std::is_same<typename T::value_type, settings_parameter>::value,
                 "T::value_type is not settings_parameter");
 
@@ -103,17 +94,11 @@ void send_http2_settings(SyncWriteStream& stream, const T& parameters) {
 
 template<typename SyncWriteStream>
 void send_http2_settings(SyncWriteStream& stream) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   send_http2_settings(stream, std::vector<settings_parameter>());
 }
 
 template<typename SyncWriteStream>
 void send_http2_settings_ack(SyncWriteStream& stream) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   http2_frame settings;
 
   auto& header = settings.header();
@@ -133,9 +118,6 @@ void send_http2_headers(SyncWriteStream& stream,
                         const std::string& path,
                         const http_header_list& req_headers,
                         std::size_t max_payload_len = 16384) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   std::vector<hpack::header_type> header_array{
     {":method", "GET"},
     {":scheme", "https"},
@@ -212,9 +194,6 @@ void send_http2_headers(SyncWriteStream& stream,
 
 template<typename SyncWriteStream>
 void send_http2_window_update(SyncWriteStream& stream, uint32_t stream_id, uint32_t increment) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   if (increment & 0x80000000) {
     throw std::invalid_argument("increment too large");
   }
@@ -238,9 +217,6 @@ void send_http2_window_update(SyncWriteStream& stream, uint32_t stream_id, uint3
 
 template<typename SyncWriteStream>
 void send_http2_goaway(SyncWriteStream& stream, uint32_t stream_id) {
-  static_assert(boost::beast::is_sync_write_stream<SyncWriteStream>::value,
-                "SyncWriteStream requirements not met");
-
   http2_frame goaway;
 
   auto& header = goaway.header();
