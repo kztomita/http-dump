@@ -7,6 +7,9 @@ tcp_socket::tcp_socket()
   : socket_(io_context_) {
 }
 
+void tcp_socket::set_host(const std::string& host) {
+}
+
 void tcp_socket::connect(const boost::asio::ip::address& ip, uint16_t port) {
   socket_.connect(asio::ip::tcp::endpoint(ip, port));
 }
@@ -27,23 +30,38 @@ std::size_t tcp_socket::write_some(const boost::asio::const_buffer& buffer, boos
 
 
 ssl_stream::ssl_stream()
-  : ssl_stream(false) {
+  : ssl_stream(true, false) {
 }
 
-ssl_stream::ssl_stream(bool http2)
-  : ssl_context_(asio::ssl::context::tlsv12_client) {
+ssl_stream::ssl_stream(bool verify_cert, bool http2)
+  : ssl_context_(asio::ssl::context::tlsv12_client),
+    verify_cert_(verify_cert),
+    host_("localhost") {
+
+  ssl_context_.set_default_verify_paths();
 
   if (http2) {
     auto native_ctx = ssl_context_.native_handle();
     SSL_CTX_set_alpn_protos(native_ctx, (const unsigned char *)"\x02h2", 3);
   }
 
-  stream_.reset(new boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(io_context_, ssl_context_));
+  stream_.reset(new socket_type(io_context_, ssl_context_));
+}
+
+void ssl_stream::set_host(const std::string& host) {
+  host_ = host;
 }
 
 void ssl_stream::connect(const boost::asio::ip::address& ip, uint16_t port) {
-  // TODO 証明書
   stream_->lowest_layer().connect(asio::ip::tcp::endpoint(ip, port));
+
+  if (verify_cert_) {
+    // for SNI
+    SSL_set_tlsext_host_name(stream_->native_handle(), host_.c_str());
+
+    stream_->set_verify_mode(asio::ssl::verify_peer);
+    stream_->set_verify_callback(asio::ssl::rfc2818_verification(host_));
+  }
 
   stream_->handshake(asio::ssl::stream_base::client);
 }
@@ -62,7 +80,7 @@ std::size_t ssl_stream::write_some(const boost::asio::const_buffer& buffer, boos
   return stream_->write_some(buffer, ec);
 }
 
-boost::asio::ssl::stream<boost::asio::ip::tcp::socket>& ssl_stream::inner_stream() const {
+ssl_stream::socket_type& ssl_stream::inner_stream() const {
   return *stream_;
 }
 

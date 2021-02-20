@@ -21,8 +21,10 @@ void usage(const char* message = nullptr) {
   std::cerr << "Usage:" << std::endl;
   std::cerr << "http-client <options> <url>" << std::endl << std::endl;
   std::cerr << "-v:       verbose mode" << std::endl;
+  std::cerr << "-h:       show this help" << std::endl;
   std::cerr << "--http2:  use http/2 (https only)" << std::endl;
-  std::cerr << "-H:       header" << std::endl;
+  std::cerr << "-H:       add header (Ex.-H \"X-Foo: bar\")" << std::endl;
+  std::cerr << "-k:       skip certificate verification" << std::endl;
 
   exit(1);
 }
@@ -38,13 +40,20 @@ int main(int argc, char *argv[]) {
     usage();
   }
 
+  int opt_argc = argc;
+  std::string url;
+  if (argv[argc - 1][0] != '-') {
+    url = argv[argc - 1];
+    opt_argc--;
+  }
+
   static struct option long_options[] = {
     {"http2",     no_argument, 0,  1 },
     {0,                     0, 0,  0 },
   };
   while (true) {
-    int opt = getopt_long(argc - 1, argv, "H:v",
-                      long_options, NULL);
+    int opt = getopt_long(opt_argc, argv, "hH:kv",
+                          long_options, NULL);
     if (opt == -1) {
       break;
     }
@@ -60,15 +69,17 @@ int main(int argc, char *argv[]) {
         }
       }
       break;
+    case 'k':
+      g_verify_cert = false;
+      break;
     case 'v':
       g_verbose = true;
       break;
+    case 'h':
     case '?':
       usage();
     }
   }
-
-  std::string url(argv[argc - 1]);
 
   try {
     url_components c = parse_url(url);

@@ -4,12 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast/core.hpp>
 
 class sync_stream_wrapper {
 public:
+  virtual void set_host(const std::string& host) = 0;
   virtual void connect(const boost::asio::ip::address& ip, uint16_t port) = 0;
 
   // For SyncReadStream requirements
@@ -33,6 +35,7 @@ private:
 public:
   tcp_socket();
 
+  void set_host(const std::string& host) override;
   void connect(const boost::asio::ip::address& ip, uint16_t port) override;
 
   std::size_t read_some(const boost::asio::mutable_buffer& buffer) override;
@@ -50,12 +53,15 @@ public:
 private:
   boost::asio::io_context io_context_;
   boost::asio::ssl::context ssl_context_;
+  bool verify_cert_;
+  std::string host_;
   std::unique_ptr<socket_type> stream_;
 
 public:
   ssl_stream();
-  explicit ssl_stream(bool http2);
+  explicit ssl_stream(bool verify_cert, bool http2);
 
+  void set_host(const std::string& host) override;
   void connect(const boost::asio::ip::address& ip, uint16_t port) override;
 
   std::size_t read_some(const boost::asio::mutable_buffer& buffer) override;

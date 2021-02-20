@@ -8,6 +8,7 @@ namespace asio = boost::asio;
 http_response httpv1::get(const boost::asio::ip::address& ip, uint16_t port, http_scheme scheme, const std::string& host, const std::string& path, const http_header_list& headers) {
   std::unique_ptr<sync_stream_wrapper> socket = create_socket(scheme);
 
+  socket->set_host(host);
   socket->connect(ip, port);
 
   std::ostringstream request_stream;

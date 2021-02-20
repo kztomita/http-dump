@@ -7,6 +7,7 @@
 #include <string_view>
 #include <boost/asio/ssl.hpp>
 #include "debug.h"
+#include "global.h"
 #include "http2_frame.h"
 #include "http2_socket.h"
 #include "http_header.h"
@@ -51,7 +52,8 @@ http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, htt
     throw std::invalid_argument("http scheme not supported on http/2.");
   }
 
-  ssl_stream ssl_stream_wrapper(true);
+  ssl_stream ssl_stream_wrapper(g_verify_cert, true);
+  ssl_stream_wrapper.set_host(host);
   ssl_stream_wrapper.connect(ip, port);
 
   asio::ssl::stream<asio::ip::tcp::socket>& stream = ssl_stream_wrapper.inner_stream();

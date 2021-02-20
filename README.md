@@ -36,9 +36,11 @@ Linux
     http-dump <options> <url>
     
     options:
-    -v         verbose mode
-    --http2    http/2で接続
-    -H         header
+    -v:       verbose mode
+    -h:       show this help
+    --http2:  use http/2 (https only)
+    -H:       add header (Ex.-H "X-Foo: bar")
+    -k:       skip certificate verification
 
 -vオプションをつけると送受信するHTTPフレームやhttpヘッダーの内容を表示します。-vがない場合はGETリクエストの結果、取得したレスポンスボディを表示します(curlのような動作)。
 
@@ -47,6 +49,8 @@ Linux
 --http2オプションをつけない場合は、http/1.1で接続します。
 
 -Hオプションでヘッダーを指定できます。複数のヘッダーを指定したい場合は複数の-Hオプションを指定してください。
+
+-kオプションを指定するとhttps通信時に証明書の検証をスキップします。
 
 ## 使用例
 
@@ -68,8 +72,6 @@ Linux
 - リクエスト種別はGETのみ。POST等には対応していません。
 
 - 単純にGETしてレスポンスを受け取るだけなので、使用するストリームは一つだけです。複数ストリームを作成し並行してデータを取得するようなHTTP/2の特徴を活かすような処理はしていません。
-
-- サーバーのSSL証明書の内容はチェックしていません。
 
 - サーバーから送られてくるSETTINGSフレームは受け取るだけで何もしていません(Windowサイズ設定等)。
 
