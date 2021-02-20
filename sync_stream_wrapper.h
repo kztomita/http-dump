@@ -59,7 +59,7 @@ private:
 
 public:
   ssl_stream();
-  explicit ssl_stream(bool verify_cert, bool http2);
+  ssl_stream(bool verify_cert, bool http2);
 
   void set_host(const std::string& host) override;
   void connect(const boost::asio::ip::address& ip, uint16_t port) override;
