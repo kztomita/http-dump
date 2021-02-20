@@ -1,4 +1,4 @@
-#include "h2.h"
+#include "httpv2.h"
 #include <algorithm>
 #include <locale>
 #include <vector>
@@ -46,22 +46,15 @@ std::string convert_header_name(const std::string& name) {
 } // unnamed namespace
 
 
-http_response h2::get(const boost::asio::ip::address& ip, uint16_t port, const std::string& host, const std::string& path, const http_header_list& req_headers) {
-  asio::io_context io_context;
+http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, http_scheme scheme, const std::string& host, const std::string& path, const http_header_list& req_headers) {
+  if (scheme != http_scheme::https) {
+    throw std::invalid_argument("http scheme not supported on http/2.");
+  }
 
-  asio::ssl::context ctx(asio::ssl::context::tlsv12_client);
+  ssl_stream ssl_stream_wrapper(true);
+  ssl_stream_wrapper.connect(ip, port);
 
-  auto native_ctx = ctx.native_handle();
-  SSL_CTX_set_alpn_protos(native_ctx, (const unsigned char *)"\x02h2", 3);
-
-  asio::ssl::stream<asio::ip::tcp::socket> stream(io_context, ctx);
-
-  // TODO 証明書
-
-  stream.lowest_layer().connect(asio::ip::tcp::endpoint(ip, port));
-  stream.lowest_layer().set_option(asio::ip::tcp::no_delay(true));
-
-  stream.handshake(boost::asio::ssl::stream_base::client);
+  asio::ssl::stream<asio::ip::tcp::socket>& stream = ssl_stream_wrapper.inner_stream();
 
   const unsigned char* alpn_data = nullptr;
   unsigned int alpn_len = 0;

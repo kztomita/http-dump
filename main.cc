@@ -7,12 +7,11 @@
 #include "debug.h"
 #include "socket.h"
 #include "global.h"
-#include "h2.h"
-#include "http.h"
 #include "http_header.h"
 #include "http_header_list.h"
 #include "http_response.h"
-#include "https.h"
+#include "httpv1.h"
+#include "httpv2.h"
 #include "url.h"
 
 void usage(const char* message = nullptr) {
@@ -97,24 +96,24 @@ int main(int argc, char *argv[]) {
     }
     boost::asio::ip::address remote_address(endpoints.begin()->endpoint().address());
 
+    http_scheme scheme;
     if (c.scheme == "http") {
-      http protocol;
-      http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
-      debug_dump(r);
-      std::cout << r.stringify_payload() << std::endl;
+      scheme = http_scheme::http;
     } else if (c.scheme == "https") {
-      if (use_http2) {
-        h2 protocol;
-        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
-        debug_dump(r);
-        std::cout << r.stringify_payload() << std::endl;
-      } else {
-        https protocol;
-        http_response r = protocol.get(remote_address, port, c.host, c.path_and_query, headers);
-        debug_dump(r);
-        std::cout << r.stringify_payload() << std::endl;
-      }
+      scheme = http_scheme::https;
+    } else {
+      throw std::invalid_argument("unsupported scheme.");
     }
+
+    std::unique_ptr<http_protocol> protocol;
+    if (use_http2 && scheme == http_scheme::https) {
+      protocol.reset(new httpv2);
+    } else {
+      protocol.reset(new httpv1);
+    }
+    http_response r = protocol->get(remote_address, port, scheme, c.host, c.path_and_query, headers);
+    debug_dump(r);
+    std::cout << r.stringify_payload() << std::endl;
   } catch (const std::exception& e) {
     std::cerr << e.what() << std::endl;
     return 1;
