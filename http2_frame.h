@@ -109,6 +109,18 @@ enum http2_settings_parameter {
   SETTINGS_MAX_HEADER_LIST_SIZE   = 0x6,
 };
 
+const int HTTP2_DATA_END_STREAM_FLAG = 0x01;
+const int HTTP2_DATA_PADDED_FLAG     = 0x08;
+
+const int HTTP2_HEADERS_END_STREAM_FLAG  = 0x01;
+const int HTTP2_HEADERS_END_HEADERS_FLAG = 0x04;
+const int HTTP2_HEADERS_PADDED_FLAG      = 0x08;
+const int HTTP2_HEADERS_PRIORITY_FLAG    = 0x20;
+
+const int HTTP2_SETTINGS_ACK_FLAG = 0x01;
+
+const int HTTP2_CONTINUATION_END_HEADERS_FLAG = 0x04;
+
 enum http2_error_code {NO_ERROR             = 0x0,
                        PROTOCOL_ERROR       = 0x1,
                        INTERNAL_ERROR       = 0x2,

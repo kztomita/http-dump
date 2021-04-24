@@ -90,7 +90,7 @@ http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, htt
   while (!rcv_settings || !rcv_settings_ack) {
     auto frame = read_http2_frame(stream);
     if (frame.type() == http2_frame_header::TYPE_SETTINGS) {
-      if (frame.flags() & 0x01) {  // ACK
+      if (frame.flags() & HTTP2_SETTINGS_ACK_FLAG) {
         rcv_settings_ack = true;
       } else {
         rcv_settings = true;
@@ -114,18 +114,18 @@ http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, htt
   }
   std::size_t fragment_offset = 0;
   std::size_t pad_length = 0;
-  if (headers_frame.flags() & 0x08) {        // PADDED flag
+  if (headers_frame.flags() & HTTP2_HEADERS_PADDED_FLAG) {
     pad_length = headers_frame.payload()[fragment_offset];
     fragment_offset += 1;
   }
-  if (headers_frame.flags() & 0x20) {        // PRIORITY flag
+  if (headers_frame.flags() & HTTP2_HEADERS_PRIORITY_FLAG) {
     fragment_offset += 5;
   }
   header_block.insert(header_block.end(),
                       headers_frame.payload().begin() + fragment_offset,
                       headers_frame.payload().end() - pad_length);
 
-  if (!(headers_frame.flags() & 0x04)) {  // !END_HEADERS
+  if (!(headers_frame.flags() & HTTP2_HEADERS_END_HEADERS_FLAG)) {
     // CONTINUATIONが続く
     while (true) {
       auto continuation_frame = read_http2_frame(stream);
@@ -137,7 +137,7 @@ http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, htt
                           continuation_frame.payload().begin(),
                           continuation_frame.payload().end());
 
-      if (continuation_frame.flags() & 0x04) {  // END_HEADERS
+      if (continuation_frame.flags() & HTTP2_CONTINUATION_END_HEADERS_FLAG) {
         break;
       }
     }
@@ -165,11 +165,11 @@ http_response httpv2::get(const boost::asio::ip::address& ip, uint16_t port, htt
     if (data_frame.type() != http2_frame_header::TYPE_DATA) {
       throw std::runtime_error("The frame which isn't a DATA frame was received.");
     }
-    if (data_frame.flags() & 0x08) {
+    if (data_frame.flags() & HTTP2_DATA_PADDED_FLAG) {
       throw std::runtime_error("padding flag not supported.");
     }
     response_body.insert(response_body.end(), data_frame.payload().begin(), data_frame.payload().end());
-    if (data_frame.flags() & 0x01) { // END_STREAM
+    if (data_frame.flags() & HTTP2_DATA_END_STREAM_FLAG) {
       break;
     }
 
