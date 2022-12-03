@@ -23,6 +23,7 @@ void usage(const char* message = nullptr) {
   std::cerr << "-v:       verbose mode" << std::endl;
   std::cerr << "-h:       show this help" << std::endl;
   std::cerr << "--http2:  use http/2 (https only)" << std::endl;
+  std::cerr << "--keylog <filename>:  TLS keylog file" << std::endl;
   std::cerr << "-H:       add header (Ex.-H \"X-Foo: bar\")" << std::endl;
   std::cerr << "-k:       skip certificate verification" << std::endl;
 
@@ -48,8 +49,9 @@ int main(int argc, char *argv[]) {
   }
 
   static struct option long_options[] = {
-    {"http2",     no_argument, 0,  1 },
-    {0,                     0, 0,  0 },
+    {"http2",     no_argument,       0,  1 },
+    {"keylog",    required_argument, 0,  2 },
+    {0,           0,                 0,  0 },
   };
   while (true) {
     int opt = getopt_long(opt_argc, argv, "hH:kv",
@@ -60,6 +62,9 @@ int main(int argc, char *argv[]) {
     switch (opt) {
     case 1:     // --http2
       use_http2 = true;
+      break;
+    case 2:     // --keylog
+      g_keylog_file = optarg;
       break;
     case 'H':
       {

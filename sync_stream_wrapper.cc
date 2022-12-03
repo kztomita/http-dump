@@ -1,5 +1,21 @@
 #include "sync_stream_wrapper.h"
+#include <iostream>
+#include <fstream>
 #include <openssl/ssl.h>
+#include "global.h"
+
+namespace {
+void ssl_keylog_callback(const SSL *ssl, const char *line) {
+  std::ofstream fs(g_keylog_file, std::ios_base::out | std::ios_base::app);
+  if (!fs) {
+    std::cerr << "Can't open " << g_keylog_file << std::endl;
+  }
+
+  fs << line << std::endl;
+
+  fs.close();
+}
+}
 
 namespace asio = boost::asio;
 
@@ -40,9 +56,14 @@ ssl_stream::ssl_stream(bool verify_cert, bool http2)
 
   ssl_context_.set_default_verify_paths();
 
+  auto native_ctx = ssl_context_.native_handle();
+
   if (http2) {
-    auto native_ctx = ssl_context_.native_handle();
     SSL_CTX_set_alpn_protos(native_ctx, (const unsigned char *)"\x02h2", 3);
+  }
+
+  if (g_keylog_file) {
+    SSL_CTX_set_keylog_callback(native_ctx, ssl_keylog_callback);
   }
 
   stream_.reset(new socket_type(io_context_, ssl_context_));
