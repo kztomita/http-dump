@@ -39,6 +39,7 @@ Linux
     -v:       verbose mode
     -h:       show this help
     --http2:  use http/2 (https only)
+    --keylog <filename>:  TLS keylog file
     -H:       add header (Ex.-H "X-Foo: bar")
     -k:       skip certificate verification
 
@@ -51,6 +52,8 @@ Linux
 -Hオプションでヘッダーを指定できます。複数のヘッダーを指定したい場合は複数の-Hオプションを指定してください。
 
 -kオプションを指定するとhttps通信時に証明書の検証をスキップします。
+
+--keylogオプションを指定すると、指定ファイルに通信中の鍵情報を出力します。これはChromeのSSLKEYLOGFILE環境変数と同じような動作をします。Wiresharkで通信をキャプチャしたい時は指定してください。別途、WiresharkのTLSプロトコル設定で、(Pre)-Master-Secret log filename に本ログファイルを指定する必要があります。
 
 ## 使用例
 
